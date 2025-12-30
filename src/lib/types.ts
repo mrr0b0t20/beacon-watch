@@ -42,12 +42,23 @@ export interface CheckResult {
 }
 
 export interface Integration {
+  id: string;
   user_id: string;
   discord_webhook?: string;
   slack_webhook?: string;
   telegram_bot_key?: string;
   email_enabled: boolean;
   sms_credits: number;
+}
+
+export interface Alert {
+  id: string;
+  monitor_id: string;
+  channel: string;
+  message?: string;
+  delivered_at?: string;
+  success: boolean;
+  created_at: string;
 }
 
 export interface PlanLimits {
