@@ -14,7 +14,215 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alerts: {
+        Row: {
+          channel: string
+          created_at: string
+          delivered_at: string | null
+          id: string
+          message: string | null
+          monitor_id: string
+          success: boolean
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          message?: string | null
+          monitor_id: string
+          success?: boolean
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          message?: string | null
+          monitor_id?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "monitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      check_results: {
+        Row: {
+          created_at: string
+          http_code: number | null
+          id: string
+          monitor_id: string
+          region: string
+          response_ms: number
+          status: Database["public"]["Enums"]["monitor_status"]
+        }
+        Insert: {
+          created_at?: string
+          http_code?: number | null
+          id?: string
+          monitor_id: string
+          region: string
+          response_ms?: number
+          status: Database["public"]["Enums"]["monitor_status"]
+        }
+        Update: {
+          created_at?: string
+          http_code?: number | null
+          id?: string
+          monitor_id?: string
+          region?: string
+          response_ms?: number
+          status?: Database["public"]["Enums"]["monitor_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_results_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "monitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations: {
+        Row: {
+          created_at: string
+          discord_webhook: string | null
+          email_enabled: boolean
+          id: string
+          slack_webhook: string | null
+          sms_credits: number
+          telegram_bot_key: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discord_webhook?: string | null
+          email_enabled?: boolean
+          id?: string
+          slack_webhook?: string | null
+          sms_credits?: number
+          telegram_bot_key?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discord_webhook?: string | null
+          email_enabled?: boolean
+          id?: string
+          slack_webhook?: string | null
+          sms_credits?: number
+          telegram_bot_key?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitors: {
+        Row: {
+          avg_response_ms: number
+          created_at: string
+          expected_status: number
+          id: string
+          interval_sec: number
+          keyword: string | null
+          last_checked: string | null
+          monitor_type: Database["public"]["Enums"]["monitor_type"]
+          name: string
+          region_mode: Database["public"]["Enums"]["region_mode"]
+          status: Database["public"]["Enums"]["monitor_status"]
+          updated_at: string
+          uptime_percentage: number
+          url: string
+          user_id: string
+        }
+        Insert: {
+          avg_response_ms?: number
+          created_at?: string
+          expected_status?: number
+          id?: string
+          interval_sec?: number
+          keyword?: string | null
+          last_checked?: string | null
+          monitor_type?: Database["public"]["Enums"]["monitor_type"]
+          name: string
+          region_mode?: Database["public"]["Enums"]["region_mode"]
+          status?: Database["public"]["Enums"]["monitor_status"]
+          updated_at?: string
+          uptime_percentage?: number
+          url: string
+          user_id: string
+        }
+        Update: {
+          avg_response_ms?: number
+          created_at?: string
+          expected_status?: number
+          id?: string
+          interval_sec?: number
+          keyword?: string | null
+          last_checked?: string | null
+          monitor_type?: Database["public"]["Enums"]["monitor_type"]
+          name?: string
+          region_mode?: Database["public"]["Enums"]["region_mode"]
+          status?: Database["public"]["Enums"]["monitor_status"]
+          updated_at?: string
+          uptime_percentage?: number
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          plan?: Database["public"]["Enums"]["plan_type"]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_type"]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +231,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      monitor_status: "up" | "down" | "paused" | "pending"
+      monitor_type: "http" | "keyword" | "port"
+      plan_type: "free" | "starter" | "premium"
+      region_mode: "nearest" | "multi" | "all"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +361,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      monitor_status: ["up", "down", "paused", "pending"],
+      monitor_type: ["http", "keyword", "port"],
+      plan_type: ["free", "starter", "premium"],
+      region_mode: ["nearest", "multi", "all"],
+    },
   },
 } as const

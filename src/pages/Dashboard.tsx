@@ -9,7 +9,7 @@ import { useMonitors } from '@/contexts/MonitorContext';
 import { Plus, Activity, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function Dashboard() {
-  const { user, planLimits } = useAuth();
+  const { profile, planLimits } = useAuth();
   const { monitors } = useMonitors();
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -111,7 +111,7 @@ export default function Dashboard() {
           {!canAddMore && monitors.length > 0 && (
             <div className="mt-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
               <p className="text-sm text-warning">
-                You've reached the monitor limit for your {user?.plan} plan.{' '}
+                You've reached the monitor limit for your {profile?.plan} plan.{' '}
                 <button className="underline font-medium hover:no-underline">
                   Upgrade to add more
                 </button>

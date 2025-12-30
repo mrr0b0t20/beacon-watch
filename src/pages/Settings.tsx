@@ -49,7 +49,7 @@ const plans: { id: Plan; name: string; price: string; features: string[] }[] = [
 ];
 
 export default function Settings() {
-  const { user, planLimits, updatePlan } = useAuth();
+  const { profile, planLimits, updatePlan } = useAuth();
   const [discordWebhook, setDiscordWebhook] = useState('');
 
   const isChannelAvailable = (channel: AlertChannel) => {
@@ -75,7 +75,7 @@ export default function Settings() {
             <h2 className="text-lg font-semibold text-foreground mb-4">Your Plan</h2>
             <div className="grid md:grid-cols-3 gap-4">
               {plans.map((plan) => {
-                const isCurrentPlan = user?.plan === plan.id;
+                const isCurrentPlan = profile?.plan === plan.id;
                 return (
                   <Card 
                     key={plan.id}

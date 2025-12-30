@@ -28,7 +28,7 @@ interface AddMonitorModalProps {
 }
 
 export function AddMonitorModal({ open, onOpenChange }: AddMonitorModalProps) {
-  const { user, planLimits } = useAuth();
+  const { profile, planLimits } = useAuth();
   const { addMonitor, isLoading } = useMonitors();
   
   const [url, setUrl] = useState('');
@@ -59,9 +59,9 @@ export function AddMonitorModal({ open, onOpenChange }: AddMonitorModalProps) {
   };
 
   const isIntervalLocked = (optionPlan: Plan) => {
-    if (!user) return true;
+    if (!profile) return true;
     const planOrder: Plan[] = ['free', 'starter', 'premium'];
-    return planOrder.indexOf(optionPlan) > planOrder.indexOf(user.plan);
+    return planOrder.indexOf(optionPlan) > planOrder.indexOf(profile.plan);
   };
 
   return (
@@ -162,7 +162,7 @@ export function AddMonitorModal({ open, onOpenChange }: AddMonitorModalProps) {
             <div className="rounded-lg bg-secondary/50 p-3 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Zap className="h-4 w-4 text-primary" />
-                <span>Your plan: <span className="text-foreground capitalize">{user?.plan}</span></span>
+                <span>Your plan: <span className="text-foreground capitalize">{profile?.plan}</span></span>
               </div>
               <ul className="mt-2 space-y-1 text-muted-foreground text-xs">
                 <li>• Check from {planLimits.region_mode === 'nearest' ? '1 region' : planLimits.region_mode === 'multi' ? '3 regions' : 'all regions'}</li>

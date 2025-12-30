@@ -29,10 +29,10 @@ const navItems = [
 ];
 
 export function Sidebar() {
-  const { user, logout } = useAuth();
+  const { profile, logout } = useAuth();
 
   const getPlanBadgeColor = () => {
-    switch (user?.plan) {
+    switch (profile?.plan) {
       case 'premium':
         return 'bg-primary/20 text-primary';
       case 'starter':
@@ -82,14 +82,14 @@ export function Sidebar() {
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-sm font-medium">
-                  {user?.email.charAt(0).toUpperCase()}
+                  {profile?.email.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-medium truncate text-foreground">
-                    {user?.email}
+                    {profile?.email}
                   </p>
                   <span className={cn('text-xs px-1.5 py-0.5 rounded capitalize', getPlanBadgeColor())}>
-                    {user?.plan}
+                    {profile?.plan}
                   </span>
                 </div>
               </div>
