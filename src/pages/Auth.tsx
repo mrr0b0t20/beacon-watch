@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { Zap, ArrowRight, Check } from 'lucide-react';
+import { Zap, ArrowRight, Check, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -20,6 +20,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   
   const { login, signup, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -54,6 +55,9 @@ export default function Auth() {
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
             toast.error('Invalid email or password');
+          } else if (error.message.includes('Email not confirmed')) {
+            toast.error('Please verify your email before logging in');
+            setShowVerificationMessage(true);
           } else {
             toast.error(error.message);
           }
@@ -61,7 +65,7 @@ export default function Auth() {
         }
         toast.success('Welcome back!');
       } else {
-        const { error } = await signup(email, password);
+        const { error, needsVerification } = await signup(email, password);
         if (error) {
           if (error.message.includes('User already registered')) {
             toast.error('This email is already registered. Try signing in.');
@@ -70,7 +74,10 @@ export default function Auth() {
           }
           return;
         }
-        toast.success('Account created! Check your email to confirm.');
+        if (needsVerification) {
+          setShowVerificationMessage(true);
+          toast.success('Account created! Check your email to confirm.');
+        }
       }
     } catch (error) {
       toast.error('Something went wrong');
@@ -78,6 +85,42 @@ export default function Auth() {
       setIsLoading(false);
     }
   };
+
+  // Show email verification screen
+  if (showVerificationMessage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8 bg-background">
+        <Card className="card-gradient border-border max-w-md w-full">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Check your email</CardTitle>
+            <CardDescription className="text-base">
+              We've sent a verification link to <strong className="text-foreground">{email}</strong>. 
+              Please click the link in the email to verify your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Didn't receive the email? Check your spam folder or try again.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setShowVerificationMessage(false);
+                setEmail('');
+                setPassword('');
+              }}
+            >
+              Back to login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const features = [
     'Monitor websites & APIs',

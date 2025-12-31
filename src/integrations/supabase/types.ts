@@ -198,26 +198,35 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
+          display_name: string | null
           email: string
           id: string
           plan: Database["public"]["Enums"]["plan_type"]
+          theme: string | null
           timezone: string | null
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
+          display_name?: string | null
           email: string
           id: string
           plan?: Database["public"]["Enums"]["plan_type"]
+          theme?: string | null
           timezone?: string | null
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
+          display_name?: string | null
           email?: string
           id?: string
           plan?: Database["public"]["Enums"]["plan_type"]
+          theme?: string | null
           timezone?: string | null
           updated_at?: string
         }

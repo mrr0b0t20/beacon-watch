@@ -1,1 +1,7 @@
 project_id = "sipmhxmludkeyfjblisg"
+
+[api]
+enabled = true
+
+[functions.check-monitors]
+verify_jwt = false

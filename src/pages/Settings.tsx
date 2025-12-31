@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/hooks/useTheme';
 import { PLAN_LIMITS, Plan, AlertChannel } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   MessageSquare, 
   Mail, 
@@ -14,10 +18,17 @@ import {
   Smartphone,
   Lock,
   Zap,
-  Check
+  Check,
+  Moon,
+  Sun,
+  Camera,
+  Trash2,
+  User,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const integrations: { channel: AlertChannel; icon: any; name: string; description: string }[] = [
   { channel: 'discord', icon: MessageSquare, name: 'Discord', description: 'Receive alerts via Discord webhook' },
@@ -49,17 +60,106 @@ const plans: { id: Plan; name: string; price: string; features: string[] }[] = [
 ];
 
 export default function Settings() {
-  const { profile, planLimits, updatePlan } = useAuth();
+  const { user, profile, planLimits, updatePlan, updateProfile, deleteAccount } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  
   const [discordWebhook, setDiscordWebhook] = useState('');
+  const [displayName, setDisplayName] = useState(profile?.display_name || '');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isChannelAvailable = (channel: AlertChannel) => {
     return planLimits?.channels.includes(channel) || false;
   };
 
-  const handleSaveWebhook = () => {
-    if (discordWebhook) {
+  const handleSaveWebhook = async () => {
+    if (!user || !discordWebhook) return;
+
+    const { error } = await supabase
+      .from('integrations')
+      .update({ discord_webhook: discordWebhook })
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast.error('Failed to save webhook');
+    } else {
       toast.success('Discord webhook saved');
     }
+  };
+
+  const handleSaveDisplayName = async () => {
+    if (!displayName.trim()) {
+      toast.error('Display name cannot be empty');
+      return;
+    }
+    await updateProfile({ display_name: displayName.trim() });
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      await updateProfile({ avatar_url: publicUrl });
+      toast.success('Avatar updated');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error('Failed to upload avatar');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    const { error } = await deleteAccount();
+    
+    if (error) {
+      toast.error('Failed to delete account');
+      setIsDeletingAccount(false);
+    } else {
+      toast.success('Account deleted');
+      navigate('/auth');
+    }
+  };
+
+  const getInitials = () => {
+    if (profile?.display_name) {
+      return profile.display_name.slice(0, 2).toUpperCase();
+    }
+    if (profile?.email) {
+      return profile.email.slice(0, 2).toUpperCase();
+    }
+    return 'U';
   };
 
   return (
@@ -67,11 +167,100 @@ export default function Settings() {
       <Sidebar />
       
       <main className="flex-1 overflow-auto">
-        <div className="p-6 lg:p-8 max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-foreground mb-8">Settings</h1>
+        <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-10">
+          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+
+          {/* Profile Section */}
+          <section>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Profile</h2>
+            <Card className="card-gradient border-border/50">
+              <CardContent className="p-6 space-y-6">
+                {/* Avatar */}
+                <div className="flex items-center gap-6">
+                  <div className="relative">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={profile?.avatar_url || ''} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors"
+                      disabled={isUploadingAvatar}
+                    >
+                      {isUploadingAvatar ? (
+                        <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4 text-primary-foreground" />
+                      )}
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <div className="flex gap-3 mt-1">
+                      <Input
+                        id="displayName"
+                        placeholder="Your display name"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="bg-background border-border max-w-xs"
+                      />
+                      <Button variant="secondary" onClick={handleSaveDisplayName}>
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email (read-only) */}
+                <div>
+                  <Label>Email</Label>
+                  <p className="text-muted-foreground">{profile?.email}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Appearance Section */}
+          <section>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Appearance</h2>
+            <Card className="card-gradient border-border/50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      {theme === 'dark' ? (
+                        <Moon className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Sun className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground">Theme</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Currently using {theme} mode
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={theme === 'dark'}
+                    onCheckedChange={toggleTheme}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </section>
 
           {/* Plan Selection */}
-          <section className="mb-10">
+          <section>
             <h2 className="text-lg font-semibold text-foreground mb-4">Your Plan</h2>
             <div className="grid md:grid-cols-3 gap-4">
               {plans.map((plan) => {
@@ -176,6 +365,63 @@ export default function Settings() {
                 );
               })}
             </div>
+          </section>
+
+          {/* Danger Zone */}
+          <section>
+            <h2 className="text-lg font-semibold text-destructive mb-4">Danger Zone</h2>
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                      <Trash2 className="h-5 w-5 text-destructive" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground">Delete Account</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete your account and all data
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        Delete Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your
+                          account and remove all your data including monitors, alerts, and
+                          settings from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteAccount}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          disabled={isDeletingAccount}
+                        >
+                          {isDeletingAccount ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            'Delete Account'
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
           </section>
         </div>
       </main>
