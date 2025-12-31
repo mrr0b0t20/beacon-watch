@@ -9,6 +9,9 @@ interface Profile {
   email: string;
   plan: Plan;
   timezone: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  theme: string | null;
   created_at: string;
 }
 
@@ -19,9 +22,11 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signup: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signup: (email: string, password: string) => Promise<{ error: Error | null; needsVerification?: boolean }>;
   logout: () => Promise<void>;
   updatePlan: (plan: Plan) => Promise<void>;
+  updateProfile: (updates: Partial<Pick<Profile, 'display_name' | 'avatar_url' | 'theme'>>) => Promise<void>;
+  deleteAccount: () => Promise<{ error: Error | null }>;
   planLimits: typeof PLAN_LIMITS[Plan] | null;
 }
 
@@ -102,9 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signup = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/dashboard`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -116,10 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      return { error };
+      return { error, needsVerification: false };
     }
 
-    return { error: null };
+    // Check if email confirmation is required
+    const needsVerification = data.user && !data.session;
+
+    return { error: null, needsVerification };
   };
 
   const logout = async () => {
@@ -146,6 +154,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast.success('Plan updated successfully');
   };
 
+  const updateProfile = async (updates: Partial<Pick<Profile, 'display_name' | 'avatar_url' | 'theme'>>) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id);
+
+    if (error) {
+      toast.error('Failed to update profile');
+      return;
+    }
+
+    setProfile(prev => prev ? { ...prev, ...updates } : null);
+    toast.success('Profile updated');
+  };
+
+  const deleteAccount = async () => {
+    if (!user) return { error: new Error('Not logged in') };
+
+    try {
+      // Delete user data (RLS will handle cascading for monitors, etc.)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      if (profileError) {
+        console.error('Error deleting profile:', profileError);
+      }
+
+      // Sign out the user
+      await supabase.auth.signOut();
+      
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
   const planLimits = profile ? PLAN_LIMITS[profile.plan] : null;
 
   return (
@@ -160,6 +208,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         updatePlan,
+        updateProfile,
+        deleteAccount,
         planLimits,
       }}
     >
