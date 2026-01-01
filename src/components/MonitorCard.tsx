@@ -1,4 +1,4 @@
-import { Monitor, REGIONS } from '@/lib/types';
+import { Monitor } from '@/lib/types';
 import { StatusIndicator, StatusBadge } from './StatusIndicator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,8 @@ import {
   ExternalLink,
   Clock,
   Globe,
-  Activity
+  Activity,
+  Pencil
 } from 'lucide-react';
 import { useMonitors } from '@/contexts/MonitorContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -26,9 +27,10 @@ import { cn } from '@/lib/utils';
 interface MonitorCardProps {
   monitor: Monitor;
   onClick?: () => void;
+  onEdit?: (monitor: Monitor) => void;
 }
 
-export function MonitorCard({ monitor, onClick }: MonitorCardProps) {
+export function MonitorCard({ monitor, onClick, onEdit }: MonitorCardProps) {
   const { pauseMonitor, resumeMonitor, deleteMonitor } = useMonitors();
 
   const formatInterval = (seconds: number) => {
@@ -82,6 +84,13 @@ export function MonitorCard({ monitor, onClick }: MonitorCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(monitor);
+              }}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
               {monitor.status === 'paused' ? (
                 <DropdownMenuItem onClick={() => resumeMonitor(monitor.id)}>
                   <Play className="h-4 w-4 mr-2" />

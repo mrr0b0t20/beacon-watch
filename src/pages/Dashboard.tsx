@@ -3,15 +3,18 @@ import { Sidebar } from '@/components/Sidebar';
 import { MonitorCard } from '@/components/MonitorCard';
 import { StatsCard } from '@/components/StatsCard';
 import { AddMonitorModal } from '@/components/AddMonitorModal';
+import { EditMonitorModal } from '@/components/EditMonitorModal';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMonitors } from '@/contexts/MonitorContext';
+import { Monitor } from '@/lib/types';
 import { Plus, Activity, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function Dashboard() {
   const { profile, planLimits } = useAuth();
   const { monitors } = useMonitors();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingMonitor, setEditingMonitor] = useState<Monitor | null>(null);
 
   const stats = {
     total: monitors.length,
@@ -101,7 +104,10 @@ export default function Dashboard() {
                   className="animate-fade-in"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <MonitorCard monitor={monitor} />
+                  <MonitorCard 
+                    monitor={monitor} 
+                    onEdit={(m) => setEditingMonitor(m)}
+                  />
                 </div>
               ))}
             </div>
@@ -122,6 +128,11 @@ export default function Dashboard() {
       </main>
 
       <AddMonitorModal open={showAddModal} onOpenChange={setShowAddModal} />
+      <EditMonitorModal 
+        open={!!editingMonitor} 
+        onOpenChange={(open) => !open && setEditingMonitor(null)}
+        monitor={editingMonitor}
+      />
     </div>
   );
 }

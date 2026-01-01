@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -7,19 +7,22 @@ type Theme = 'dark' | 'light';
 export function useTheme() {
   const { user, profile } = useAuth();
   const [theme, setThemeState] = useState<Theme>(() => {
-    // Initialize from localStorage first, then profile
     const stored = localStorage.getItem('theme');
     if (stored === 'light' || stored === 'dark') return stored;
     return 'dark';
   });
+  const [initialized, setInitialized] = useState(false);
 
-  // Sync with profile theme on load
+  // Sync with profile theme only once on initial load
   useEffect(() => {
-    if (profile?.theme && (profile.theme === 'light' || profile.theme === 'dark')) {
+    if (!initialized && profile?.theme && (profile.theme === 'light' || profile.theme === 'dark')) {
       setThemeState(profile.theme as Theme);
       localStorage.setItem('theme', profile.theme);
+      setInitialized(true);
+    } else if (profile) {
+      setInitialized(true);
     }
-  }, [profile?.theme]);
+  }, [profile?.theme, initialized]);
 
   // Apply theme to document
   useEffect(() => {
@@ -29,7 +32,7 @@ export function useTheme() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const setTheme = async (newTheme: Theme) => {
+  const setTheme = useCallback(async (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
 
@@ -40,11 +43,12 @@ export function useTheme() {
         .update({ theme: newTheme })
         .eq('id', user.id);
     }
-  };
+  }, [user]);
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
+  const toggleTheme = useCallback(() => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+  }, [theme, setTheme]);
 
   return { theme, setTheme, toggleTheme };
 }
