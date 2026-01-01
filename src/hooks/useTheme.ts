@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Theme = 'dark' | 'light';
+
+// Track if we've already synced from profile globally (persists across re-mounts)
+let hasInitializedFromProfile = false;
 
 export function useTheme() {
   const { user, profile } = useAuth();
@@ -11,18 +14,19 @@ export function useTheme() {
     if (stored === 'light' || stored === 'dark') return stored;
     return 'dark';
   });
-  const [initialized, setInitialized] = useState(false);
 
-  // Sync with profile theme only once on initial load
+  // Sync with profile theme only ONCE per session (first time profile loads)
   useEffect(() => {
-    if (!initialized && profile?.theme && (profile.theme === 'light' || profile.theme === 'dark')) {
-      setThemeState(profile.theme as Theme);
-      localStorage.setItem('theme', profile.theme);
-      setInitialized(true);
-    } else if (profile) {
-      setInitialized(true);
+    if (!hasInitializedFromProfile && profile?.theme && (profile.theme === 'light' || profile.theme === 'dark')) {
+      const storedTheme = localStorage.getItem('theme');
+      // Only sync from DB if localStorage doesn't have a theme yet
+      if (!storedTheme) {
+        setThemeState(profile.theme as Theme);
+        localStorage.setItem('theme', profile.theme);
+      }
+      hasInitializedFromProfile = true;
     }
-  }, [profile?.theme, initialized]);
+  }, [profile?.theme]);
 
   // Apply theme to document
   useEffect(() => {
